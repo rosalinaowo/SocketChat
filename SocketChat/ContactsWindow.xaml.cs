@@ -1,6 +1,7 @@
 ﻿using SocketChat.Models;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -22,26 +23,71 @@ namespace SocketChat
     public partial class ContactsWindow : Window
     {
         AddressBook ab;
-        public ContactsWindow(ref AddressBook contacts)
+        public ObservableCollection<ContactWPF> Contacts { get; private set; }
+        UpdateAddressBookDelegate updateAddressBook;
+        public ContactsWindow(AddressBook ab, UpdateAddressBookDelegate updateAddressBookDelegate)
         {
             InitializeComponent();
 
-            ab = contacts;
-            foreach(Contact c in ab.Contacts)
+            Contacts = new ObservableCollection<ContactWPF>();
+            DataContext = this;
+
+            this.ab = ab;
+            this.updateAddressBook = updateAddressBookDelegate;
+            UpdateView();
+        }
+
+        private void UpdateView()
+        {
+            Contacts.Clear();
+            foreach (Contact c in ab.Contacts)
             {
-                lstContacts.Items.Add(c.ToString());
+                AddContact(c.Name, c.IPAddr);
             }
+        }
+
+        private bool CheckInfo(string name, string ipAddress)
+        {
+            IPAddress a;
+            if (name == string.Empty || !IPAddress.TryParse(ipAddress, out a))
+            {
+                MessageBox.Show("Insert valid info", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+            return true;
+        }
+
+        public void AddContact(string name, string ipAddress)
+        {
+            Grid view = new Grid();
+            view.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            view.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+
+            TextBlock tbkName = new TextBlock() { Text = name, Foreground = Brushes.Blue };
+            TextBlock tbkIpAddr = new TextBlock() { Text = ipAddress };
+            Grid.SetColumn(tbkIpAddr, 1);
+            view.Children.Add(tbkName);
+            view.Children.Add(tbkIpAddr);
+            ContactWPF c = new ContactWPF(name, ipAddress, view);
+            Contacts.Add(c);
         }
 
         private void btnAdd_Click(object sender, RoutedEventArgs e)
         {
-            IPAddress a;
-            if(tbxName.Text == string.Empty || !IPAddress.TryParse(tbxAddr.Text, out a))
+            if(!CheckInfo(tbxName.Text, tbxAddr.Text)) { return; }
+            Contact c;
+            if((c = ab.GetContactFromIP(tbxAddr.Text)) != null || (c = ab.GetContactFromName(tbxName.Text)) != null)
             {
-                MessageBox.Show("Insert valid info", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                ab.Contacts[ab.Contacts.IndexOf(c)] = new Contact(tbxName.Text, tbxAddr.Text);
             }
-            ab.AddContact(tbxName.Text, tbxAddr.Text);
+            else
+            {
+                ab.AddContact(tbxName.Text, tbxAddr.Text);
+            }
+            tbxName.Text = string.Empty;
+            tbxAddr.Text = string.Empty;
+            UpdateView();
+            updateAddressBook?.Invoke(ab);
         }
     }
 }

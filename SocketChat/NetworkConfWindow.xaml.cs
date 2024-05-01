@@ -20,8 +20,8 @@ namespace SocketChat
     public partial class NetworkConfWindow : Window
     {
         int port;
-        ChangePort changePort;
-        public NetworkConfWindow(string ip, int port, ChangePort changeTitleDelegate)
+        ChangePortDelegate changePort;
+        public NetworkConfWindow(string ip, int port, ChangePortDelegate changeTitleDelegate)
         {
             InitializeComponent();
             
@@ -36,7 +36,7 @@ namespace SocketChat
             if(int.TryParse(tbxPort.Text, out port) && port > 0 && port <= 65535)
             {
                 changePort?.Invoke(port);
-                this.Close();
+                Close();
             }
             else
             {

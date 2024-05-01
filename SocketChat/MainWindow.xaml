@@ -5,10 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SocketChat"
         mc:Ignorable="d"
-        Title="Chat" Height="500" Width="500" Background="LightBlue">
+        Title="Chat" Height="500" Width="500" Background="LightBlue" Icon="/Resources/chat.ico">
     <Window.Resources>
         <Style TargetType="TextBox">
             <Setter Property="Background" Value="Gainsboro"></Setter>
+            <Setter Property="TextWrapping" Value="Wrap"></Setter>
         </Style>
         <Style TargetType="ListBox">
             <Setter Property="Background" Value="LightBlue"></Setter>
@@ -25,6 +26,11 @@
                 <MenuItem Header="_Network" Name="mniNetwork" Click="mniNetwork_Click">
                     <MenuItem.Icon>
                         <Image Source="/Resources/network.ico"></Image>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Save Contacts" Name="mniSaveContacts" Click="mniSaveContacts_Click">
+                    <MenuItem.Icon>
+                        <Image Source="/Resources/save.ico"></Image>
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="_Quit" Name="mniQuit" Click="mniQuit_Click">
@@ -46,7 +52,14 @@
                 <ColumnDefinition Width="6*"></ColumnDefinition>
                 <ColumnDefinition></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <ListBox Name="lstMessages" Grid.Row="0" Grid.ColumnSpan="3"></ListBox>
+            <ListBox Name="lstMessages" ItemsSource="{Binding messages}" Grid.Row="0" Grid.ColumnSpan="3" HorizontalContentAlignment="Stretch"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <ContentPresenter Content="{Binding}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
             <Label Grid.Row="1">Rx socket</Label>
             <TextBox Name="tbxSocket" Grid.Row="1" Grid.Column="1"></TextBox>
             <Button Name="btnSend" Click="btnSend_Click" Grid.Row="1" Grid.Column="2">Send</Button>

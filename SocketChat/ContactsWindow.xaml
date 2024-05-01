@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SocketChat"
         mc:Ignorable="d"
-        Title="Contacts" Height="500" Width="400" Background="LightYellow">
+        Title="Address Book" Height="500" Width="400" Background="LightYellow" Icon="/Resources/addressBook.ico">
     <Grid Margin="5">
         <Grid.RowDefinitions>
             <RowDefinition Height="50"></RowDefinition>
@@ -25,6 +25,17 @@
             <TextBox Name="tbxAddr"></TextBox>
         </StackPanel>
         <Button Name="btnAdd" Click="btnAdd_Click" Grid.Column="3" Margin="5">Add</Button>
-        <ListBox Name="lstContacts" Grid.Row="1" Grid.ColumnSpan="3"></ListBox>
+        <ListBox Name="lstContacts" Grid.Row="1" Grid.ColumnSpan="3" ItemsSource="{Binding Contacts}">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"></Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <ContentPresenter Content="{Binding View}" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
     </Grid>
 </Window>

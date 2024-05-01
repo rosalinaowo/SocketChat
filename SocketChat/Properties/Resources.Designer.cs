@@ -63,6 +63,26 @@ namespace SocketChat.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] addressBook {
+            get {
+                object obj = ResourceManager.GetObject("addressBook", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] chat {
+            get {
+                object obj = ResourceManager.GetObject("chat", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] network {
             get {
                 object obj = ResourceManager.GetObject("network", resourceCulture);
