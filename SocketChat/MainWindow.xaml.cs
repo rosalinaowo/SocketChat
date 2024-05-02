@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
@@ -78,6 +79,7 @@ namespace SocketChat
             StopReceiving();
             if (s != null) { s.Close(); }
             s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            s.EnableBroadcast = true;
             IPAddress localAddr = IPAddress.Any;
             IPEndPoint localEndPoint = new IPEndPoint(localAddr, sourcePort);
             s.Bind(localEndPoint);
@@ -89,9 +91,9 @@ namespace SocketChat
         public void StartReceiving()
         {
             cancellationTokenSource = new CancellationTokenSource();
-            receiveTask = Task.Factory.StartNew(() =>
+            receiveTask = Task.Factory.StartNew(async () =>
             {
-                while(!cancellationTokenSource.Token.IsCancellationRequested) { receive(); }
+                while(!cancellationTokenSource.Token.IsCancellationRequested) { receive(); await Task.Delay(200); }
             }, cancellationTokenSource.Token);
         }
 
@@ -131,21 +133,17 @@ namespace SocketChat
 
         private void HandleSend()
         {
-            string[] remoteSocketData = tbxSocket.Text.Split(':'); // controlla validita' dati
+            string[] remoteSocketData = tbxSocket.Text.Split(':');
             IPAddress remoteAddr;
             int remotePort;
 
             if(tbxMessage.Text == string.Empty) { return; }
-            if (remoteSocketData[0] == "localhost") { remoteSocketData[0] = "127.0.0.1"; }
-            if (!IPAddress.TryParse(remoteSocketData[0], out remoteAddr) || !int.TryParse(remoteSocketData[1], out remotePort) || remotePort <= 0 || remotePort > 65535)
+            if(remoteSocketData[0] == "localhost") { remoteSocketData[0] = "127.0.0.1"; }
+            if(!IPAddress.TryParse(remoteSocketData[0], out remoteAddr) || !int.TryParse(remoteSocketData[1], out remotePort) || remotePort <= 0 || remotePort > 65535)
             {
                 MessageBox.Show(this, "Insert a valid address and port", "Invalid remote socket", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-
-
-            //if (remoteSocketData.Length != 2 || tbxMessage.Text == string.Empty) { return; }
-            //if (!IPAddress.TryParse(remoteSocketData[0], out remoteAddr)) { return; }
 
             send(remoteAddr, remotePort, tbxMessage.Text);
             AddMessage("127.0.0.1", tbxMessage.Text);
@@ -182,6 +180,27 @@ namespace SocketChat
             return DateTime.Now.TimeOfDay.ToString().Split('.')[0];
         }
 
+        public static IPAddress GetBroadcastIPAddress(IPAddress ip, IPAddress subnetMask)
+        {
+            uint ipAddr = BitConverter.ToUInt32(ip.GetAddressBytes(), 0);
+            uint mask = BitConverter.ToUInt32(subnetMask.GetAddressBytes(), 0);
+            uint broadcastAddr = ipAddr | ~mask;
+            
+            return new IPAddress(BitConverter.GetBytes(broadcastAddr));
+        }
+
+        public static string GetDefaultIP()
+        {
+            return NetworkInterface.GetAllNetworkInterfaces()
+                .Where(nic => nic.OperationalStatus == OperationalStatus.Up)
+                .Where(nic => nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                .Select(nic => nic.GetIPProperties().UnicastAddresses) // Get all IPs
+                .SelectMany(addr => addr) // Convert to IEnumerable
+                .Where(addr => addr.Address.AddressFamily == AddressFamily.InterNetwork) // Get only IPv4
+                .Select(addr => addr.Address.ToString()) // Convert IP to string
+                .FirstOrDefault(); // Return IP string or null
+        }
+
         private void btnContacts_Click(object sender, RoutedEventArgs e)
         {
             ContactsWindow = new ContactsWindow(AddressBook, UpdateAddressBook);
@@ -202,7 +221,7 @@ namespace SocketChat
 
         private void mniNetwork_Click(object sender, RoutedEventArgs e)
         {
-            NetworkConfWindow = new NetworkConfWindow("placeholder", sourcePort, ChangePort);
+            NetworkConfWindow = new NetworkConfWindow(GetDefaultIP(), sourcePort, ChangePort);
             NetworkConfWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             NetworkConfWindow.Owner = this;
             NetworkConfWindow.ShowDialog();

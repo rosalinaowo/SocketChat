@@ -62,14 +62,38 @@ namespace SocketChat
             Grid view = new Grid();
             view.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
             view.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            view.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(50, GridUnitType.Pixel) });
 
             TextBlock tbkName = new TextBlock() { Text = name, Foreground = Brushes.Blue };
             TextBlock tbkIpAddr = new TextBlock() { Text = ipAddress };
-            Grid.SetColumn(tbkIpAddr, 1);
+            Button btnDelete = new Button() { Height = 16, Width = 16, Background = Brushes.Transparent, BorderThickness = new Thickness(0) };
+            Image imgDelete = new Image() { Height = 16, Width = 16 };
+            imgDelete.Source = new BitmapImage(new Uri("pack://application:,,,/SocketChat;component/Resources/delete.ico"));
+            btnDelete.Content = imgDelete;
+            btnDelete.Click += (object sender, RoutedEventArgs e) => DeleteContact(new Contact(name, ipAddress));
+
             view.Children.Add(tbkName);
+            Grid.SetColumn(tbkIpAddr, 1);
             view.Children.Add(tbkIpAddr);
+            Grid.SetColumn(btnDelete, 2);
+            view.Children.Add(btnDelete);
+            
             ContactWPF c = new ContactWPF(name, ipAddress, view);
             Contacts.Add(c);
+        }
+
+        private void DeleteContact(Contact contact)
+        {
+            foreach(Contact c in ab.Contacts)
+            {
+                if(contact.Name == c.Name && contact.IPAddr == c.IPAddr)
+                {
+                    ab.Contacts.Remove(c);
+                    break;
+                }
+            }
+            UpdateView();
+            updateAddressBook?.Invoke(ab);
         }
 
         private void btnAdd_Click(object sender, RoutedEventArgs e)
