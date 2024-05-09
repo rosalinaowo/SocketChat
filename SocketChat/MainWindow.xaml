@@ -44,19 +44,19 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="10*"></RowDefinition>
-                <RowDefinition></RowDefinition>
+                <RowDefinition Height="30"></RowDefinition>
                 <RowDefinition Height="2*"></RowDefinition>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition></ColumnDefinition>
+                <ColumnDefinition MaxWidth="100"></ColumnDefinition>
                 <ColumnDefinition Width="6*"></ColumnDefinition>
-                <ColumnDefinition></ColumnDefinition>
+                <ColumnDefinition MinWidth="60" MaxWidth="100"></ColumnDefinition>
             </Grid.ColumnDefinitions>
             <ListBox Name="lstMessages" ItemsSource="{Binding messages}" Grid.Row="0" Grid.ColumnSpan="3" HorizontalContentAlignment="Stretch"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <ContentPresenter Content="{Binding}" />
+                        <ContentPresenter Content="{Binding View}" />
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
@@ -64,7 +64,7 @@
             <TextBox Name="tbxSocket" Grid.Row="1" Grid.Column="1"></TextBox>
             <Button Name="btnSend" Click="btnSend_Click" Grid.Row="1" Grid.Column="2">Send</Button>
             <Label Grid.Row="2">Message</Label>
-            <TextBox Name="tbxMessage" Grid.Row="2" Grid.Column="1" KeyDown="tbxMessage_KeyDown"></TextBox>
+            <TextBox Name="tbxMessage" Grid.Row="2" Grid.Column="1" KeyDown="tbxMessage_KeyDown" ScrollViewer.VerticalScrollBarVisibility="Auto"></TextBox>
             <Button Name="btnContacts" Click="btnContacts_Click" Grid.Row="2" Grid.Column="2" MaxHeight="40">Contacts</Button>
         </Grid>
     </DockPanel>

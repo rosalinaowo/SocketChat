@@ -10,6 +10,7 @@ namespace SocketChat.Models
     public class AddressBook
     {
         public List<Contact> Contacts { get; set; }
+
         public AddressBook(List<Contact> contacts)
         {
             Contacts = contacts;

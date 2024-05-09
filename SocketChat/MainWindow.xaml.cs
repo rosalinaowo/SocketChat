@@ -29,9 +29,12 @@ namespace SocketChat
 
     public partial class MainWindow : Window
     {
-        public ObservableCollection<DockPanel> messages { get; private set; }
-        int sourcePort = 50000;
-        Socket s;
+        public static readonly int DEFAULT_PORT = 50000;
+        public static readonly string DESCRIPTION = "For testing porpuses only.\n" +
+                                                    "Right click on name, timestamp or message to copy it.";
+        public ObservableCollection<Message> messages { get; private set; }
+        int sourcePort = DEFAULT_PORT;
+        P2P? socket;
         Task receiveTask;
         CancellationTokenSource cancellationTokenSource;
         readonly string databasePath = "contacts.xml";
@@ -46,19 +49,26 @@ namespace SocketChat
         {
             InitializeComponent();
 
-            messages = new ObservableCollection<DockPanel>();
+            messages = new ObservableCollection<Message>();
             DataContext = this;
             serializer = new XmlSerializer(typeof(List<Contact>));
             ChangePort += ChangePortImplementation;
             UpdateAddressBook += (AddressBook ab) => AddressBook = ab;
 
+            LoadXML();
+            ChangePort.Invoke(sourcePort);
+        }
+
+        private void LoadXML()
+        {
             if (File.Exists(databasePath))
             {
                 try
                 {
                     StreamReader sr = new StreamReader(databasePath);
                     AddressBook = new AddressBook((List<Contact>)serializer.Deserialize(sr));
-                } catch (Exception ex)
+                }
+                catch (Exception ex)
                 {
                     MessageBox.Show(this, $"Error loading {databasePath}:\n{ex.Message}", "Database error", MessageBoxButton.OK, MessageBoxImage.Error);
                     AddressBook = new AddressBook();
@@ -68,21 +78,30 @@ namespace SocketChat
             {
                 AddressBook = new AddressBook();
             }
-
-            
-            ChangePort.Invoke(sourcePort);
         }
 
         public void ChangePortImplementation(int port)
         {
             sourcePort = port;
             StopReceiving();
-            if (s != null) { s.Close(); }
-            s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            s.EnableBroadcast = true;
-            IPAddress localAddr = IPAddress.Any;
-            IPEndPoint localEndPoint = new IPEndPoint(localAddr, sourcePort);
-            s.Bind(localEndPoint);
+            if(socket != null)
+            {
+                socket.Close();
+                socket = null;
+            }
+
+            try
+            {
+                socket = new P2P(IPAddress.Any, sourcePort);
+            }
+            catch (SocketException ex)
+            {
+                MessageBox.Show(this, $"Error creating socket:\n{ex.Message}", "Initialize socket error", MessageBoxButton.OK, MessageBoxImage.Error);
+                socket = null;
+                ShowNetConfig(IsVisible ? this : null);
+                return;
+            }
+
             StartReceiving();
 
             Title = $"Chat (listening on: {port})";
@@ -93,7 +112,15 @@ namespace SocketChat
             cancellationTokenSource = new CancellationTokenSource();
             receiveTask = Task.Factory.StartNew(async () =>
             {
-                while(!cancellationTokenSource.Token.IsCancellationRequested) { receive(); await Task.Delay(200); }
+                while(!cancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    string[]? message = socket.Receive();
+                    if(message != null)
+                    {
+                        Dispatcher.Invoke(AddMessage, message[0], message[1]);
+                    }
+                    await Task.Delay(200);
+                }
             }, cancellationTokenSource.Token);
         }
 
@@ -115,22 +142,6 @@ namespace SocketChat
             if (e.Key == Key.Enter) { HandleSend(); }
         }
 
-        private void receive()
-        {
-            int nBytes = 0;
-            if ((nBytes = s.Available) > 0)
-            {
-                byte[] buffer = new byte[nBytes];
-                EndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
-                s.ReceiveFrom(buffer, ref remoteEndPoint);
-
-                string senderAddr = ((IPEndPoint)remoteEndPoint).Address.ToString();
-                string message = Encoding.UTF8.GetString(buffer, 0, nBytes);
-
-                Dispatcher.Invoke(AddMessage, senderAddr, message);
-            }
-        }
-
         private void HandleSend()
         {
             string[] remoteSocketData = tbxSocket.Text.Split(':');
@@ -145,32 +156,19 @@ namespace SocketChat
                 return;
             }
 
-            send(remoteAddr, remotePort, tbxMessage.Text);
+            socket.Send(remoteAddr, remotePort, tbxMessage.Text);
             AddMessage("127.0.0.1", tbxMessage.Text);
             tbxMessage.Text = string.Empty;
         }
 
-        private void send(IPAddress remoteAddr, int remotePort, string message)
+        private void AddMessage(string senderIP, string message)
         {
-            IPEndPoint remoteEndPoint = new IPEndPoint(remoteAddr, remotePort);
-            byte[] msg = Encoding.UTF8.GetBytes(message);
-            s.SendTo(msg, remoteEndPoint);
-        }
-
-        private void AddMessage(string ip, string message)
-        {
-            DockPanel msg = new DockPanel();
-            string sender;
+            string? senderName;
             try
             {
-                sender = AddressBook.GetContactFromIP(ip).Name;
-            } catch (NullReferenceException ex) { sender = ip; }
-            TextBlock tbkInfo = new TextBlock() { Text = $"{GetTime()} {sender}", Foreground = Brushes.Blue };
-            TextBlock tbkMessage = new TextBlock() { Text = ": " + message, TextWrapping = TextWrapping.Wrap };
-            tbkInfo.MouseRightButtonUp += (object sender, MouseButtonEventArgs e) => Clipboard.SetText(ip);
-            tbkMessage.MouseRightButtonUp += (object sender, MouseButtonEventArgs e) => Clipboard.SetText(message);
-            msg.Children.Add(tbkInfo);
-            msg.Children.Add(tbkMessage);
+                senderName = AddressBook.GetContactFromIP(senderIP).Name;
+            } catch (NullReferenceException ex) { senderName = null; }
+            Message msg = new Message(senderIP, senderName, message, DateTime.Now);
             messages.Add(msg);
             lstMessages.ScrollIntoView(msg);
         }
@@ -198,7 +196,15 @@ namespace SocketChat
                 .SelectMany(addr => addr) // Convert to IEnumerable
                 .Where(addr => addr.Address.AddressFamily == AddressFamily.InterNetwork) // Get only IPv4
                 .Select(addr => addr.Address.ToString()) // Convert IP to string
-                .FirstOrDefault(); // Return IP string or null
+                .FirstOrDefault(); // Return first IP string or null
+        }
+
+        private void ShowNetConfig(Window? owner)
+        {
+            NetworkConfWindow = new NetworkConfWindow(GetDefaultIP(), sourcePort, ChangePort);
+            NetworkConfWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            NetworkConfWindow.Owner = owner;
+            NetworkConfWindow.ShowDialog();
         }
 
         private void btnContacts_Click(object sender, RoutedEventArgs e)
@@ -211,7 +217,7 @@ namespace SocketChat
 
         private void mniInfo_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show(this, $"Chat v{Assembly.GetExecutingAssembly().GetName().Version}", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, $"Chat v{Assembly.GetExecutingAssembly().GetName().Version}\n{DESCRIPTION}", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void mniQuit_Click(object sender, RoutedEventArgs e)
@@ -221,19 +227,23 @@ namespace SocketChat
 
         private void mniNetwork_Click(object sender, RoutedEventArgs e)
         {
-            NetworkConfWindow = new NetworkConfWindow(GetDefaultIP(), sourcePort, ChangePort);
-            NetworkConfWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            NetworkConfWindow.Owner = this;
-            NetworkConfWindow.ShowDialog();
+            ShowNetConfig(this);
         }
 
         private void mniSaveContacts_Click(object sender, RoutedEventArgs e)
         {
-            if(AddressBook.Contacts.Count > 0)
+            try
             {
-                StreamWriter sw = new StreamWriter(databasePath);
-                serializer.Serialize(sw, AddressBook.Contacts);
-                MessageBox.Show(this, $"Saved {AddressBook.Contacts.Count} contact" + (AddressBook.Contacts.Count == 1 ? "" : "s"), "Saved successfully", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (AddressBook.Contacts.Count > 0)
+                {
+                    StreamWriter sw = new StreamWriter(databasePath);
+                    serializer.Serialize(sw, AddressBook.Contacts);
+                    MessageBox.Show(this, $"Saved {AddressBook.Contacts.Count} contact" + (AddressBook.Contacts.Count == 1 ? "" : "s"), "Saved successfully", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, $"Error saving {databasePath}:\n{ex.Message}", "Database error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

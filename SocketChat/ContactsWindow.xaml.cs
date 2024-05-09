@@ -25,6 +25,7 @@ namespace SocketChat
         AddressBook ab;
         public ObservableCollection<ContactWPF> Contacts { get; private set; }
         UpdateAddressBookDelegate updateAddressBook;
+
         public ContactsWindow(AddressBook ab, UpdateAddressBookDelegate updateAddressBookDelegate)
         {
             InitializeComponent();

@@ -13,6 +13,7 @@ namespace SocketChat.Models
         public string Name { get; set; }
         public string IPAddr { get; set; }
         public Contact() { }
+
         public Contact(string name, string ipAddr)
         {
             Name = name;
