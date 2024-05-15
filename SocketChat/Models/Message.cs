@@ -7,23 +7,63 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Xml.Serialization;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace SocketChat.Models
 {
+    [Serializable]
+    [XmlInclude(typeof(DateTime))]
+    //[XmlInclude(typeof(MatrixTransform))]
     public class Message
     {
-        public string SenderIP { get; private set; }
-        public string SenderName { get; private set; }
-        public string Text { get; private set; }
-        public DateTime Time { get; private set; }
-        public DockPanel View { get; private set; }
+        public string SenderIP { get; set; }
+        public string SenderName { get; set; }
+        public string NameColorHex { get; set; }
+        //[XmlElement("NameColor")]
+        //public string NameColorString
+        //{
+        //    get { return NameColor != null ? new BrushConverter().ConvertToString(NameColor) : null; }
+        //    set { NameColor = value != null ? (Brush)new BrushConverter().ConvertFromString(value) : null; }
+        //}
+        public string Text { get; set; }
+        public DateTime Time { get; set; }
 
-        public Message(string senderIp, string senderName, string text, DateTime time)
+        public Message(string senderIp, string senderName, string nameColorHex, string text, DateTime time)
         {
             SenderIP = senderIp;
             SenderName = senderName;
+            NameColorHex = nameColorHex;
             Text = text;
             Time = time;
+        }
+
+        public Message(Message message)
+        {
+            if(message == null) { throw new ArgumentNullException(nameof(message)); }
+            SenderIP = message.SenderIP;
+            SenderName = message.SenderName;
+            NameColorHex = message.NameColorHex;
+            Text = message.Text;
+            Time = message.Time;
+        }
+
+        public Message() { }
+    }
+
+    public class MessageWPF : Message
+    {
+        public DockPanel View { get; private set; }
+
+        public MessageWPF(string senderIp, string senderName, string nameColorHex, string text, DateTime time) : base(senderIp, senderName,
+                                                                                                                      nameColorHex, text,
+                                                                                                                      time)
+        {
+            InitializeView();
+        }
+
+        public MessageWPF(Message message) : base(message)
+        {
             InitializeView();
         }
 
@@ -31,7 +71,11 @@ namespace SocketChat.Models
         {
             View = new DockPanel();
             TextBlock tbkTime = new TextBlock() { Text = Time.ToString("T") + " " };
-            TextBlock tbkSender = new TextBlock() { Text = SenderName == null ? SenderIP : SenderName, Foreground = Brushes.Blue };
+            TextBlock tbkSender = new TextBlock()
+            {
+                Text = SenderName == null ? SenderIP : SenderName,
+                Foreground = (Brush)new BrushConverter().ConvertFromString(NameColorHex),
+            };
             TextBlock tbkMessage = new TextBlock() { Text = ": " + Text, TextWrapping = TextWrapping.Wrap };
             tbkTime.MouseRightButtonUp += (object sender, MouseButtonEventArgs e) => Clipboard.SetDataObject(Time.ToString());
             tbkSender.MouseRightButtonUp += (object sender, MouseButtonEventArgs e) => Clipboard.SetDataObject(SenderIP);

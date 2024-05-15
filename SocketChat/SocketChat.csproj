@@ -15,8 +15,11 @@
     <None Remove="Resources\addressBook.ico" />
     <None Remove="Resources\chat.ico" />
     <None Remove="Resources\delete.ico" />
+    <None Remove="Resources\minus.ico" />
     <None Remove="Resources\network.ico" />
     <None Remove="Resources\options.ico" />
+    <None Remove="Resources\paintbrush.ico" />
+    <None Remove="Resources\person.ico" />
     <None Remove="Resources\quit.ico" />
     <None Remove="Resources\save.ico" />
   </ItemGroup>
@@ -25,8 +28,11 @@
     <Resource Include="Resources\addressBook.ico" />
     <Resource Include="Resources\chat.ico" />
     <Resource Include="Resources\delete.ico" />
+    <Resource Include="Resources\minus.ico" />
     <Resource Include="Resources\network.ico" />
     <Resource Include="Resources\options.ico" />
+    <Resource Include="Resources\paintbrush.ico" />
+    <Resource Include="Resources\person.ico" />
     <Resource Include="Resources\quit.ico" />
     <Resource Include="Resources\save.ico" />
   </ItemGroup>

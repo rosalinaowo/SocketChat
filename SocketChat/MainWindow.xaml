@@ -5,19 +5,24 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SocketChat"
         mc:Ignorable="d"
-        Title="Chat" Height="500" Width="500" Background="LightBlue" Icon="/Resources/chat.ico">
+        Title="Chat" Height="500" Width="500" Icon="/Resources/chat.ico" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <Style TargetType="TextBox">
             <Setter Property="Background" Value="Gainsboro"></Setter>
             <Setter Property="TextWrapping" Value="Wrap"></Setter>
+            <Setter Property="Foreground" Value="{Binding TextColor}"></Setter>
         </Style>
         <Style TargetType="ListBox">
-            <Setter Property="Background" Value="LightBlue"></Setter>
+            <Setter Property="Background" Value="Transparent"></Setter>
         </Style>
         <Style TargetType="Button">
             <Setter Property="BorderBrush" Value="Gray"></Setter>
             <Setter Property="BorderThickness" Value="2"></Setter>
             <Setter Property="Margin" Value="3"></Setter>
+            <Setter Property="Foreground" Value="{Binding TextColor}"></Setter>
+        </Style>
+        <Style TargetType="Label">
+            <Setter Property="Foreground" Value="{Binding TextColor}"></Setter>
         </Style>
     </Window.Resources>
     <DockPanel>
@@ -26,6 +31,11 @@
                 <MenuItem Header="_Network" Name="mniNetwork" Click="mniNetwork_Click">
                     <MenuItem.Icon>
                         <Image Source="/Resources/network.ico"></Image>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Customization" Name="mniCustomization" Click="mniCustomization_Click">
+                    <MenuItem.Icon>
+                        <Image Source="/Resources/paintbrush.ico"></Image>
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="_Save Contacts" Name="mniSaveContacts" Click="mniSaveContacts_Click">

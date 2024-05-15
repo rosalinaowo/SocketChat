@@ -25,6 +25,24 @@ namespace SocketChat.Models
             Contacts.Add(new Contact(name, ipAddr));
         }
 
+        public void DeleteContact(Contact c)
+        {
+            Contacts.Remove(c);
+        }
+
+        public bool DeleteContact(string name, string ipAddress)
+        {
+            foreach (Contact c in Contacts)
+            {
+                if (name == c.Name && ipAddress == c.IPAddr)
+                {
+                    Contacts.Remove(c);
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public Contact? GetContactFromIP(string ipAddress)
         {
             foreach(Contact c in Contacts)

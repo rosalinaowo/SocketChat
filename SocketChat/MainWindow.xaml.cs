@@ -24,15 +24,26 @@ namespace SocketChat
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     
+    
+    public enum ChatColor { Background, Text }
+    public delegate void ChangeNameDelegate(string name, string ipAddress);
     public delegate void ChangePortDelegate(int port);
     public delegate void UpdateAddressBookDelegate(AddressBook ab);
+    public delegate void ChangeBrushDelegate(Brush brush, ChatColor chatColor);
 
     public partial class MainWindow : Window
     {
         public static readonly int DEFAULT_PORT = 50000;
         public static readonly string DESCRIPTION = "For testing porpuses only.\n" +
                                                     "Right click on name, timestamp or message to copy it.";
-        public ObservableCollection<Message> messages { get; private set; }
+        public static readonly Brush DEFAULT_BG_COLOR = Brushes.LightBlue;
+        public static readonly Brush DEFAULT_TEXT_COLOR = Brushes.Black;
+        public static readonly Brush DEFAULT_NAME_COLOR = Brushes.Blue;
+
+        public static Brush nameColor = DEFAULT_NAME_COLOR;
+        public string? whoami { get; set; }
+        Brush TextColor;
+        public ObservableCollection<MessageWPF> messages { get; private set; }
         int sourcePort = DEFAULT_PORT;
         P2P? socket;
         Task receiveTask;
@@ -42,20 +53,41 @@ namespace SocketChat
         AddressBook AddressBook;
         NetworkConfWindow NetworkConfWindow;
         ContactsWindow ContactsWindow;
+        public ChangeNameDelegate ChangeName { get; private set; }
         public ChangePortDelegate ChangePort { get; private set; }
         public UpdateAddressBookDelegate UpdateAddressBook { get; private set; }
+        public ChangeBrushDelegate ChangeBrush { get; private set; }
 
         public MainWindow()
         {
             InitializeComponent();
 
-            messages = new ObservableCollection<Message>();
             DataContext = this;
+
+            // Inatialize main stuff
+            whoami = null;
+            Background = DEFAULT_BG_COLOR;
+            TextColor = DEFAULT_TEXT_COLOR;
+            messages = new ObservableCollection<MessageWPF>();
             serializer = new XmlSerializer(typeof(List<Contact>));
+
+            // Delegates
+            ChangeName += (name, ipAddress) =>
+            {
+                AddressBook.DeleteContact(whoami, ipAddress);
+                whoami = name;
+                AddressBook.AddContact(whoami, ipAddress);
+            };
             ChangePort += ChangePortImplementation;
             UpdateAddressBook += (AddressBook ab) => AddressBook = ab;
+            ChangeBrush += ChangeBrushImplementation;
 
             LoadXML();
+            try
+            {
+                whoami = AddressBook.GetContactFromIP(P2P.LOCALHOST).Name;
+            } catch { whoami = null; }
+
             ChangePort.Invoke(sourcePort);
         }
 
@@ -107,6 +139,16 @@ namespace SocketChat
             Title = $"Chat (listening on: {port})";
         }
 
+        public void ChangeBrushImplementation(Brush brush, ChatColor chatColor)
+        {
+            switch(chatColor)
+            {
+                case ChatColor.Background: Background = brush; break;
+                case ChatColor.Text: TextColor = brush; break;
+                default: break;
+            }
+        }
+
         public void StartReceiving()
         {
             cancellationTokenSource = new CancellationTokenSource();
@@ -114,10 +156,12 @@ namespace SocketChat
             {
                 while(!cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    string[]? message = socket.Receive();
+                    Message? message = socket.Receive();
                     if(message != null)
                     {
-                        Dispatcher.Invoke(AddMessage, message[0], message[1]);
+                        //await Dispatcher.InvokeAsync(() => AddMessage(message));
+                        //AddMessage(message);
+                        Dispatcher.Invoke(AddMessage, message);
                     }
                     await Task.Delay(200);
                 }
@@ -149,28 +193,68 @@ namespace SocketChat
             int remotePort;
 
             if(tbxMessage.Text == string.Empty) { return; }
-            if(remoteSocketData[0] == "localhost") { remoteSocketData[0] = "127.0.0.1"; }
+            if(remoteSocketData[0] == "localhost") { remoteSocketData[0] = P2P.LOCALHOST; }
             if(!IPAddress.TryParse(remoteSocketData[0], out remoteAddr) || !int.TryParse(remoteSocketData[1], out remotePort) || remotePort <= 0 || remotePort > 65535)
             {
                 MessageBox.Show(this, "Insert a valid address and port", "Invalid remote socket", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            socket.Send(remoteAddr, remotePort, tbxMessage.Text);
-            AddMessage("127.0.0.1", tbxMessage.Text);
+            Message msg = new Message(P2P.LOCALHOST, whoami, new BrushConverter().ConvertToString(nameColor), tbxMessage.Text, DateTime.Now);
+            socket.Send(remoteAddr, remotePort, msg);
+            AddMessage(msg);
             tbxMessage.Text = string.Empty;
         }
 
-        private void AddMessage(string senderIP, string message)
+        private void AddMessage(Message message)
         {
-            string? senderName;
+            MessageWPF msg;
             try
             {
-                senderName = AddressBook.GetContactFromIP(senderIP).Name;
-            } catch (NullReferenceException ex) { senderName = null; }
-            Message msg = new Message(senderIP, senderName, message, DateTime.Now);
+                string? preferredSenderName = AddressBook.GetContactFromIP(message.SenderIP).Name;
+                //msg = new MessageWPF(new Message(message) { SenderName = preferredSenderName });
+                msg = Dispatcher.Invoke(() =>
+                {
+                    var msgCopy = new Message(message) { SenderName = preferredSenderName };
+                    return new MessageWPF(msgCopy);
+                });
+            }
+            catch (NullReferenceException ex)
+            {
+                msg = Dispatcher.Invoke(() => new MessageWPF(message));
+            }
+
             messages.Add(msg);
             lstMessages.ScrollIntoView(msg);
+
+            // Async implementation
+            /* MessageWPF msg = await Dispatcher.InvokeAsync(() =>
+            {
+                try
+                {
+                    string? preferredSenderName;
+                    if (message.SenderIP == "127.0.0.1")
+                    {
+                        preferredSenderName = whoami; // salva automaticamente nei contatti te stessa
+                    }
+                    else
+                    {
+                        preferredSenderName = AddressBook.GetContactFromIP(message.SenderIP).Name;
+                    }
+                    var msgCopy = new Message(message) { SenderName = preferredSenderName };
+                    return new MessageWPF(msgCopy);
+                }
+                catch (NullReferenceException ex)
+                {
+                    return new MessageWPF(message);
+                }
+            });
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                messages.Add(msg);
+                lstMessages.ScrollIntoView(msg);
+            }); */
         }
 
         public static string GetTime()
@@ -202,8 +286,16 @@ namespace SocketChat
         private void ShowNetConfig(Window? owner)
         {
             NetworkConfWindow = new NetworkConfWindow(GetDefaultIP(), sourcePort, ChangePort);
-            NetworkConfWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            NetworkConfWindow.Owner = owner;
+            if(owner != null)
+            {
+                NetworkConfWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                NetworkConfWindow.Owner = owner;
+            }
+            else
+            {
+                NetworkConfWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            }
+            
             NetworkConfWindow.ShowDialog();
         }
 
@@ -245,6 +337,14 @@ namespace SocketChat
             {
                 MessageBox.Show(this, $"Error saving {databasePath}:\n{ex.Message}", "Database error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void mniCustomization_Click(object sender, RoutedEventArgs e)
+        {
+            CustomizationWindow customizationWindow = new CustomizationWindow(whoami, ChangeName, Background, TextColor, ChangeBrush);
+            customizationWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            customizationWindow.Owner = this;
+            customizationWindow.Show();
         }
     }
 }

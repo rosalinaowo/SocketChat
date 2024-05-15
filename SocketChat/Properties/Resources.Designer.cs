@@ -93,6 +93,16 @@ namespace SocketChat.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] minus {
+            get {
+                object obj = ResourceManager.GetObject("minus", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] network {
             get {
                 object obj = ResourceManager.GetObject("network", resourceCulture);
@@ -106,6 +116,26 @@ namespace SocketChat.Properties {
         internal static byte[] options {
             get {
                 object obj = ResourceManager.GetObject("options", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] paintbrush {
+            get {
+                object obj = ResourceManager.GetObject("paintbrush", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] person {
+            get {
+                object obj = ResourceManager.GetObject("person", resourceCulture);
                 return ((byte[])(obj));
             }
         }
