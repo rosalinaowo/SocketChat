@@ -14,24 +14,19 @@ namespace SocketChat.Models
 {
     [Serializable]
     [XmlInclude(typeof(DateTime))]
-    //[XmlInclude(typeof(MatrixTransform))]
     public class Message
     {
         public string SenderIP { get; set; }
+        public int SenderPort { get; set; }
         public string SenderName { get; set; }
         public string NameColorHex { get; set; }
-        //[XmlElement("NameColor")]
-        //public string NameColorString
-        //{
-        //    get { return NameColor != null ? new BrushConverter().ConvertToString(NameColor) : null; }
-        //    set { NameColor = value != null ? (Brush)new BrushConverter().ConvertFromString(value) : null; }
-        //}
         public string Text { get; set; }
         public DateTime Time { get; set; }
 
-        public Message(string senderIp, string senderName, string nameColorHex, string text, DateTime time)
+        public Message(string senderIp, int senderPort, string senderName, string nameColorHex, string text, DateTime time)
         {
             SenderIP = senderIp;
+            SenderPort = senderPort;
             SenderName = senderName;
             NameColorHex = nameColorHex;
             Text = text;
@@ -42,6 +37,7 @@ namespace SocketChat.Models
         {
             if(message == null) { throw new ArgumentNullException(nameof(message)); }
             SenderIP = message.SenderIP;
+            SenderPort = message.SenderPort;
             SenderName = message.SenderName;
             NameColorHex = message.NameColorHex;
             Text = message.Text;
@@ -55,9 +51,8 @@ namespace SocketChat.Models
     {
         public DockPanel View { get; private set; }
 
-        public MessageWPF(string senderIp, string senderName, string nameColorHex, string text, DateTime time) : base(senderIp, senderName,
-                                                                                                                      nameColorHex, text,
-                                                                                                                      time)
+        public MessageWPF(string senderIp, int senderPort, string senderName, string nameColorHex, string text, DateTime time) :
+               base(senderIp, senderPort, senderName, nameColorHex, text, time)
         {
             InitializeView();
         }
@@ -78,7 +73,7 @@ namespace SocketChat.Models
             };
             TextBlock tbkMessage = new TextBlock() { Text = ": " + Text, TextWrapping = TextWrapping.Wrap };
             tbkTime.MouseRightButtonUp += (object sender, MouseButtonEventArgs e) => Clipboard.SetDataObject(Time.ToString());
-            tbkSender.MouseRightButtonUp += (object sender, MouseButtonEventArgs e) => Clipboard.SetDataObject(SenderIP);
+            tbkSender.MouseRightButtonUp += (object sender, MouseButtonEventArgs e) => Clipboard.SetDataObject(SenderIP + ":" + SenderPort);
             tbkMessage.MouseRightButtonUp += (object sender, MouseButtonEventArgs e) => Clipboard.SetDataObject(Text);
             View.Children.Add(tbkTime);
             View.Children.Add(tbkSender);

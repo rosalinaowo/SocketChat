@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SocketChat"
         mc:Ignorable="d"
-        Title="Chat" Height="500" Width="500" Icon="/Resources/chat.ico" WindowStartupLocation="CenterScreen">
+        Title="Chat" Height="500" Width="500" Icon="/Resources/chat.ico" WindowStartupLocation="CenterScreen" Closing="Window_Closing">
     <Window.Resources>
         <Style TargetType="TextBox">
             <Setter Property="Background" Value="Gainsboro"></Setter>

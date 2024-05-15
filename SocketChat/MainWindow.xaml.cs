@@ -82,7 +82,7 @@ namespace SocketChat
             UpdateAddressBook += (AddressBook ab) => AddressBook = ab;
             ChangeBrush += ChangeBrushImplementation;
 
-            LoadXML();
+            AddressBook = LoadXML();
             try
             {
                 whoami = AddressBook.GetContactFromIP(P2P.LOCALHOST).Name;
@@ -91,24 +91,43 @@ namespace SocketChat
             ChangePort.Invoke(sourcePort);
         }
 
-        private void LoadXML()
+        private AddressBook LoadXML()
         {
             if (File.Exists(databasePath))
             {
                 try
                 {
                     StreamReader sr = new StreamReader(databasePath);
-                    AddressBook = new AddressBook((List<Contact>)serializer.Deserialize(sr));
+                    AddressBook ab = new AddressBook((List<Contact>)serializer.Deserialize(sr));
+                    sr.Close();
+                    return ab;
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show(this, $"Error loading {databasePath}:\n{ex.Message}", "Database error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    AddressBook = new AddressBook();
+                    return new AddressBook();
                 }
             }
             else
             {
-                AddressBook = new AddressBook();
+                return new AddressBook();
+            }
+        }
+
+        private void SaveXML()
+        {
+            try
+            {
+                if (AddressBook.Contacts.Count > 0)
+                {
+                    StreamWriter sw = new StreamWriter(databasePath);
+                    serializer.Serialize(sw, AddressBook.Contacts);
+                    MessageBox.Show(this, $"Saved {AddressBook.Contacts.Count} contact" + (AddressBook.Contacts.Count == 1 ? "" : "s"), "Saved successfully", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, $"Error saving {databasePath}:\n{ex.Message}", "Database error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -200,7 +219,7 @@ namespace SocketChat
                 return;
             }
 
-            Message msg = new Message(P2P.LOCALHOST, whoami, new BrushConverter().ConvertToString(nameColor), tbxMessage.Text, DateTime.Now);
+            Message msg = new Message(P2P.LOCALHOST, sourcePort, whoami, new BrushConverter().ConvertToString(nameColor), tbxMessage.Text, DateTime.Now);
             socket.Send(remoteAddr, remotePort, msg);
             AddMessage(msg);
             tbxMessage.Text = string.Empty;
@@ -280,7 +299,7 @@ namespace SocketChat
                 .SelectMany(addr => addr) // Convert to IEnumerable
                 .Where(addr => addr.Address.AddressFamily == AddressFamily.InterNetwork) // Get only IPv4
                 .Select(addr => addr.Address.ToString()) // Convert IP to string
-                .FirstOrDefault(); // Return first IP string or null
+                .FirstOrDefault(); // Return first IP string (hoping it's the default adapter) or null
         }
 
         private void ShowNetConfig(Window? owner)
@@ -324,19 +343,7 @@ namespace SocketChat
 
         private void mniSaveContacts_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                if (AddressBook.Contacts.Count > 0)
-                {
-                    StreamWriter sw = new StreamWriter(databasePath);
-                    serializer.Serialize(sw, AddressBook.Contacts);
-                    MessageBox.Show(this, $"Saved {AddressBook.Contacts.Count} contact" + (AddressBook.Contacts.Count == 1 ? "" : "s"), "Saved successfully", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, $"Error saving {databasePath}:\n{ex.Message}", "Database error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            SaveXML();
         }
 
         private void mniCustomization_Click(object sender, RoutedEventArgs e)
@@ -345,6 +352,20 @@ namespace SocketChat
             customizationWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             customizationWindow.Owner = this;
             customizationWindow.Show();
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if(LoadXML() != AddressBook)
+            {
+                var result = MessageBox.Show(this, "Do you want to save the address book?", "Save?", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                switch (result)
+                {
+                    case MessageBoxResult.Yes: SaveXML(); break;
+                    case MessageBoxResult.No: break;
+                    case MessageBoxResult.Cancel: case MessageBoxResult.None: e.Cancel = true; break;
+                }
+            }
         }
     }
 }
