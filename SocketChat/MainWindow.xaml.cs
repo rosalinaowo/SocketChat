@@ -85,7 +85,7 @@ namespace SocketChat
             AddressBook = LoadXML();
             try
             {
-                whoami = AddressBook.GetContactFromIP(P2P.LOCALHOST).Name;
+                whoami = AddressBook.GetContactFromIP(P2P.LOCALHOST)?.Name;
             } catch { whoami = null; }
 
             ChangePort.Invoke(sourcePort);
