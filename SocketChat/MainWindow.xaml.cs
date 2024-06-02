@@ -230,7 +230,7 @@ namespace SocketChat
             MessageWPF msg;
             try
             {
-                string? preferredSenderName = AddressBook.GetContactFromIP(message.SenderIP).Name;
+                string? preferredSenderName = AddressBook.GetContactFromIP(message.SenderIP)?.Name;
                 //msg = new MessageWPF(new Message(message) { SenderName = preferredSenderName });
                 msg = Dispatcher.Invoke(() =>
                 {
